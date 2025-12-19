@@ -1,22 +1,36 @@
 package com.example.vetclinic.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Table(name = "vets")
 public class Vet {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;
-    private String specialization;
+    private String firstName;
+    private String lastName;
+    private String specialty;
 
-    @OneToMany(mappedBy = "vet", cascade = CascadeType.ALL)
-    private List<Appointment> appointments = new ArrayList<>();
+    public Vet() {}
+
+    public Vet(String firstName, String lastName, String specialty) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.specialty = specialty;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+
+    public String getSpecialty() { return specialty; }
+    public void setSpecialty(String specialty) { this.specialty = specialty; }
 }

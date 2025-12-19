@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface TreatmentRepository extends JpaRepository<Treatment, Long> {
+    boolean existsByAppointmentId(Long appointmentId);
 }
