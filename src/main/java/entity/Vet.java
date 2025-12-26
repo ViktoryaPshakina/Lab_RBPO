@@ -10,18 +10,22 @@ public class Vet {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "first_name", nullable = false)
     private String firstName;
+
+    @Column(name = "last_name", nullable = false)
     private String lastName;
+
+    @Column(name = "specialty", nullable = false)
     private String specialty;
 
+    @Column(name = "phone", unique = true, nullable = false)
+    private String phone;
+
+    // Конструкторы
     public Vet() {}
 
-    public Vet(String firstName, String lastName, String specialty) {
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.specialty = specialty;
-    }
-
+    // Геттеры и сеттеры
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -33,4 +37,7 @@ public class Vet {
 
     public String getSpecialty() { return specialty; }
     public void setSpecialty(String specialty) { this.specialty = specialty; }
+
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 }

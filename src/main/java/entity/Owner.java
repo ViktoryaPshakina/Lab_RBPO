@@ -1,8 +1,6 @@
 package com.example.vetclinic.entity;
 
 import jakarta.persistence.*;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "owners")
@@ -12,21 +10,22 @@ public class Owner {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "first_name", nullable = false)
     private String firstName;
+
+    @Column(name = "last_name", nullable = false)
     private String lastName;
+
+    @Column(name = "phone", unique = true, nullable = false)
     private String phone;
 
-    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Pet> pets = new ArrayList<>();
+    @Column(name = "email", unique = true, nullable = false)
+    private String email;
 
+    // Конструкторы
     public Owner() {}
 
-    public Owner(String firstName, String lastName, String phone) {
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.phone = phone;
-    }
-
+    // Геттеры и сеттеры
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -39,16 +38,6 @@ public class Owner {
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
 
-    public List<Pet> getPets() { return pets; }
-    public void setPets(List<Pet> pets) { this.pets = pets; }
-
-    public void addPet(Pet pet) {
-        pets.add(pet);
-        pet.setOwner(this);
-    }
-
-    public void removePet(Pet pet) {
-        pets.remove(pet);
-        pet.setOwner(null);
-    }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 }

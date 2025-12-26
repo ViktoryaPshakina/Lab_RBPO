@@ -10,8 +10,13 @@ public class Pet {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "name", nullable = false)
     private String name;
+
+    @Column(name = "species", nullable = false)
     private String species;
+
+    @Column(name = "age")
     private Integer age;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -20,13 +25,6 @@ public class Pet {
 
     // Конструкторы
     public Pet() {}
-
-    public Pet(String name, String species, Integer age, Owner owner) {
-        this.name = name;
-        this.species = species;
-        this.age = age;
-        this.owner = owner;
-    }
 
     // Геттеры и сеттеры
     public Long getId() { return id; }

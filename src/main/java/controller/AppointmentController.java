@@ -1,98 +1,92 @@
 package com.example.vetclinic.controller;
 
+import com.example.vetclinic.dto.MedicalHistoryDto;
+import com.example.vetclinic.dto.VetScheduleDto;
 import com.example.vetclinic.entity.Appointment;
-import com.example.vetclinic.entity.Pet;
-import com.example.vetclinic.entity.Vet;
 import com.example.vetclinic.repository.AppointmentRepository;
-import com.example.vetclinic.repository.PetRepository;
-import com.example.vetclinic.repository.VetRepository;
+import com.example.vetclinic.service.ClinicService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/api/appointments")
+@RequestMapping("/api")
 public class AppointmentController {
 
     @Autowired
     private AppointmentRepository appointmentRepository;
 
     @Autowired
-    private PetRepository petRepository;
+    private ClinicService clinicService;
 
-    @Autowired
-    private VetRepository vetRepository;
-
-    @PostMapping
-    public ResponseEntity<Appointment> createAppointment(@RequestBody Appointment appointment) {
-        if (appointment.getId() != null) {
-            return ResponseEntity.badRequest().build();
+    // CRUD: создать приём
+    @PostMapping("/appointments")
+    public ResponseEntity<?> createAppointment(@RequestBody Appointment appointment) {
+        try {
+            return ResponseEntity.ok(appointmentRepository.save(appointment));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Ошибка: " + e.getMessage());
         }
-
-        Long petId = appointment.getPet().getId();
-        Long vetId = appointment.getVet().getId();
-
-        Pet pet = petRepository.findById(petId)
-                .orElseThrow(() -> new RuntimeException("Pet not found with id: " + petId));
-        Vet vet = vetRepository.findById(vetId)
-                .orElseThrow(() -> new RuntimeException("Vet not found with id: " + vetId));
-
-        appointment.setPet(pet);
-        appointment.setVet(vet);
-        // Убедись, что дата установлена (иначе может быть null)
-        if (appointment.getDateTime() == null) {
-            appointment.setDateTime(LocalDateTime.now());
-        }
-
-        Appointment saved = appointmentRepository.save(appointment);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
-    @GetMapping
+    // CRUD: получить всех приёмов
+    @GetMapping("/appointments")
     public ResponseEntity<List<Appointment>> getAllAppointments() {
         return ResponseEntity.ok(appointmentRepository.findAll());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Appointment> getAppointment(@PathVariable Long id) {
+    // CRUD: получить приём по ID
+    @GetMapping("/appointments/{id}")
+    public ResponseEntity<Appointment> getAppointmentById(@PathVariable Long id) {
         return appointmentRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Appointment> updateAppointment(@PathVariable Long id, @RequestBody Appointment details) {
+    // CRUD: обновить приём
+    @PutMapping("/appointments/{id}")
+    public ResponseEntity<?> updateAppointment(@PathVariable Long id, @RequestBody Appointment appointmentDetails) {
         return appointmentRepository.findById(id)
                 .map(appointment -> {
-                    appointment.setDateTime(details.getDateTime());
-                    appointment.setReason(details.getReason());
-
-                    Long newPetId = details.getPet().getId();
-                    Long newVetId = details.getVet().getId();
-                    Pet newPet = petRepository.findById(newPetId)
-                            .orElseThrow(() -> new RuntimeException("Pet not found: " + newPetId));
-                    Vet newVet = vetRepository.findById(newVetId)
-                            .orElseThrow(() -> new RuntimeException("Vet not found: " + newVetId));
-
-                    appointment.setPet(newPet);
-                    appointment.setVet(newVet);
-
-                    Appointment updated = appointmentRepository.save(appointment);
-                    return ResponseEntity.ok(updated);
+                    appointment.setDateTime(appointmentDetails.getDateTime());
+                    appointment.setReason(appointmentDetails.getReason());
+                    appointment.setComplaints(appointmentDetails.getComplaints());
+                    appointment.setStatus(appointmentDetails.getStatus());
+                    appointment.setPet(appointmentDetails.getPet());
+                    appointment.setVet(appointmentDetails.getVet());
+                    return ResponseEntity.ok(appointmentRepository.save(appointment));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @DeleteMapping("/{id}")
+    // CRUD: удалить приём
+    @DeleteMapping("/appointments/{id}")
     public ResponseEntity<Void> deleteAppointment(@PathVariable Long id) {
-        if (!appointmentRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
+        if (appointmentRepository.existsById(id)) {
+            appointmentRepository.deleteById(id);
+            return ResponseEntity.noContent().build();
         }
-        appointmentRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.notFound().build();
+    }
+
+    // ✅ 2. История болезни питомца
+    @GetMapping("/pets/{petId}/medical-history")
+    public ResponseEntity<List<MedicalHistoryDto>> getMedicalHistory(@PathVariable Long petId) {
+        return ResponseEntity.ok(clinicService.getMedicalHistory(petId));
+    }
+
+    // ✅ 3. Расписание врача
+    @GetMapping("/vets/{vetId}/schedule")
+    public ResponseEntity<List<VetScheduleDto>> getVetSchedule(@PathVariable Long vetId) {
+        return ResponseEntity.ok(clinicService.getVetSchedule(vetId));
+    }
+
+    // ✅ 5. Отчёт по активным приёмам
+    @GetMapping("/reports/active-visits")
+    public ResponseEntity<List<Map<String, Object>>> getActiveVisits() {
+        return ResponseEntity.ok(clinicService.getActiveAppointments());
     }
 }
