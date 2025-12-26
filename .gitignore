@@ -1,0 +1,31 @@
+# Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Database (если локальная БД)
+*.db
+*.sqlite
+
+# Временные файлы
+temp/
+logs/
+
+# Скомпилированные классы
+*.class
+
+# Артефакты сборки
+*.jar
+*.war
+
+.env
