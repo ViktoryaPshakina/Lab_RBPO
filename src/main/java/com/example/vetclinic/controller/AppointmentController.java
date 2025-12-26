@@ -1,5 +1,4 @@
 package com.example.vetclinic.controller;
-
 import com.example.vetclinic.dto.MedicalHistoryDto;
 import com.example.vetclinic.dto.VetScheduleDto;
 import com.example.vetclinic.entity.Appointment;
