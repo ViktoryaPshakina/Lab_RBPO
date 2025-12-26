@@ -22,10 +22,3 @@ PostgreSQL с ограничениями:
 - CHECK: `status IN ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')`
 - ON DELETE CASCADE для целостности
 
-## Запуск
-1. Создайте БД `vet_clinic_db`
-2. Установите `.env`:
-   ```env
-   DB_URL=jdbc:postgresql://localhost:5432/vet_clinic_db
-   DB_USERNAME=postgres
-   DB_PASSWORD=RBPO1234
