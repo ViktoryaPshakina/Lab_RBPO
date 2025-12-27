@@ -2,71 +2,81 @@ package com.example.vetclinic.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.stream.Collectors;
 
 @Component
 public class JwtTokenProvider {
 
-    @Value("${app.jwt.secret:MySecretKeyForJwtAuthenticationVetClinicApplication2024}")
+    @Value("${app.jwt.secret}")
     private String jwtSecret;
 
-    @Value("${app.jwt.access-expiration:900000}")
+    @Value("${app.jwt.access-expiration}")
     private long accessExpiration;
 
-    private Key key;
+    // Рефреш токен живет 7 дней
+    private final long refreshExpiration = 604800000L;
 
-    @PostConstruct
-    public void init() {
-        this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+    // Исправленное имя метода - теперь везде getSigningKey
+    private SecretKey getSigningKey() {
+        byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
+    // 1. Генерация Access Token из Authentication (для Login)
     public String generateAccessToken(Authentication authentication) {
-        String authorities = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(","));
-
-        return Jwts.builder()
-                .setSubject(authentication.getName())
-                .claim("roles", authorities)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + accessExpiration))
-                .signWith(key, SignatureAlgorithm.HS256)
-                .compact();
+        return generateAccessTokenFromEmail(authentication.getName());
     }
 
-    public String generateRefreshToken(String email) {
+    // 2. Генерация Refresh Token из Authentication (для Login)
+    public String generateRefreshToken(Authentication authentication) {
+        return generateRefreshTokenFromEmail(authentication.getName());
+    }
+
+    // 3. Генерация Access Token из Email (для Refresh)
+    public String generateAccessTokenFromEmail(String email) {
         return Jwts.builder()
                 .setSubject(email)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 604800000)) // 7 дней
-                .signWith(key, SignatureAlgorithm.HS256)
+                .setExpiration(new Date(System.currentTimeMillis() + accessExpiration))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    // 4. Генерация Refresh Token из Email (для Refresh)
+    public String generateRefreshTokenFromEmail(String email) {
+        return Jwts.builder()
+                .setSubject(email)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + refreshExpiration))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String getEmailFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.getSubject();
     }
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token);
             return true;
-        } catch (Exception e) {
+        } catch (JwtException | IllegalArgumentException e) {
+            System.out.println("JWT Validation Error: " + e.getMessage());
             return false;
         }
-    }
-
-    public String getEmailFromToken(String token) {
-        return Jwts.parserBuilder().setSigningKey(key).build()
-                .parseClaimsJws(token).getBody().getSubject();
-    }
-
-    public Date getExpirationDate(String token) {
-        return Jwts.parserBuilder().setSigningKey(key).build()
-                .parseClaimsJws(token).getBody().getExpiration();
     }
 }

@@ -2,32 +2,29 @@ package com.example.vetclinic.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.Instant;
-import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_sessions")
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class UserSession {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    private String userEmail;
+    @Column(nullable = false)
+    private String email;
 
-    @Column(length = 1000)
-    private String accessToken;
-
-    @Column(length = 1000)
+    @Column(nullable = false, unique = true)
     private String refreshToken;
 
-    private Instant accessTokenExpiry;
-    private Instant refreshTokenExpiry;
+    @Column(nullable = false)
+    private LocalDateTime issuedAt;
 
-    @Enumerated(EnumType.STRING)
-    private SessionStatus status;
+    @Column(nullable = false)
+    private LocalDateTime expiresAt;
 }

@@ -19,15 +19,21 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        // Ищем пользователя по email
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
-        // Возвращаем стандартный объект UserDetails от Spring Security
+        String role = user.getRole();
+        // Гарантируем наличие ROLE_ для Spring Security
+        if (role != null && !role.startsWith("ROLE_")) {
+            role = "ROLE_" + role.toUpperCase();
+        } else if (role == null) {
+            role = "ROLE_USER";
+        }
+
         return new org.springframework.security.core.userdetails.User(
-                user.getEmail(), // Используем getEmail() вместо getUsername()
+                user.getEmail(),
                 user.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole())) // getRole() вместо getRoles()
+                Collections.singletonList(new SimpleGrantedAuthority(role))
         );
     }
 }

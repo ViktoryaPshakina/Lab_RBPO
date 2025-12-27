@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,41 +23,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final CustomUserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain
+    ) throws ServletException, IOException {
 
-        String header = request.getHeader("Authorization");
+        final String authHeader = request.getHeader("Authorization");
 
-        // ДИАГНОСТИКА 1: Проверяем наличие заголовка
-        if (header == null || !header.startsWith("Bearer ")) {
-            System.out.println("DEBUG: Заголовок Authorization отсутствует или не начинается с Bearer");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = header.substring(7);
-        System.out.println("DEBUG: Токен получен, проверяем валидность...");
+        String jwt = authHeader.substring(7);
 
         try {
-            if (tokenProvider.validateToken(token)) {
-                String email = tokenProvider.getEmailFromToken(token);
-                System.out.println("DEBUG: Токен валиден для пользователя: " + email);
+            String userEmail = tokenProvider.getEmailFromToken(jwt);
 
-                if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
-
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    System.out.println("DEBUG: Пользователь успешно аутентифицирован в SecurityContext!");
+                if (tokenProvider.validateToken(jwt)) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
-            } else {
-                System.out.println("DEBUG: ОШИБКА - Токен не прошел валидацию (возможно, истек или другой секретный ключ)");
             }
         } catch (Exception e) {
-            System.out.println("DEBUG: КРИТИЧЕСКАЯ ОШИБКА в фильтре: " + e.getMessage());
+            System.out.println("JWT Filter Error: " + e.getMessage());
         }
 
         filterChain.doFilter(request, response);

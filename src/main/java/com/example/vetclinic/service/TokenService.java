@@ -1,15 +1,16 @@
 package com.example.vetclinic.service;
 
 import com.example.vetclinic.dto.JwtResponse;
-import com.example.vetclinic.entity.SessionStatus;
 import com.example.vetclinic.entity.UserSession;
 import com.example.vetclinic.repository.UserSessionRepository;
 import com.example.vetclinic.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -19,46 +20,52 @@ public class TokenService {
     private final UserSessionRepository sessionRepository;
 
     @Transactional
-    public JwtResponse createSession(Authentication authentication) {
-        String email = authentication.getName();
-        String accessToken = tokenProvider.generateAccessToken(authentication);
-        String refreshToken = tokenProvider.generateRefreshToken(email);
+    public JwtResponse createSession(Authentication auth) {
+        String email = auth.getName();
+        String accessToken = tokenProvider.generateAccessToken(auth);
+        String refreshToken = tokenProvider.generateRefreshToken(auth);
 
-        UserSession session = UserSession.builder()
-                .userEmail(email)
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .accessTokenExpiry(tokenProvider.getExpirationDate(accessToken).toInstant())
-                .refreshTokenExpiry(tokenProvider.getExpirationDate(refreshToken).toInstant())
-                .status(SessionStatus.ACTIVE)
-                .build();
+        // Сохраняем сессию в БД
+        saveSession(email, refreshToken);
 
-        sessionRepository.save(session);
         return new JwtResponse(accessToken, refreshToken);
     }
 
     @Transactional
-    public JwtResponse refreshSession(String refreshToken, Authentication authentication) {
-        if (!tokenProvider.validateToken(refreshToken)) {
-            throw new BadCredentialsException("Invalid Refresh Token");
+    public JwtResponse refreshSession(String oldRefreshToken) {
+        // 1. Ищем старую сессию в БД
+        UserSession session = sessionRepository.findByRefreshToken(oldRefreshToken)
+                .orElseThrow(() -> new RuntimeException("Сессия не найдена или невалидна"));
+
+        // 2. Валидируем токен
+        if (!tokenProvider.validateToken(oldRefreshToken)) {
+            sessionRepository.delete(session);
+            throw new RuntimeException("Refresh токен просрочен");
         }
 
-        UserSession oldSession = sessionRepository.findByRefreshToken(refreshToken)
-                .orElseThrow(() -> new BadCredentialsException("Session not found"));
+        // 3. Генерируем новую пару (Rotation)
+        String email = session.getEmail();
+        String newAccessToken = tokenProvider.generateAccessTokenFromEmail(email);
+        String newRefreshToken = tokenProvider.generateRefreshTokenFromEmail(email);
 
-        if (oldSession.getStatus() == SessionStatus.USED) {
-            oldSession.setStatus(SessionStatus.REVOKED);
-            sessionRepository.save(oldSession);
-            throw new BadCredentialsException("Token reused! All sessions should be revoked for security.");
-        }
+        // 4. Удаляем старую сессию и сохраняем новую
+        sessionRepository.delete(session);
+        saveSession(email, newRefreshToken);
 
-        if (oldSession.getStatus() == SessionStatus.REVOKED) {
-            throw new BadCredentialsException("Session is revoked");
-        }
+        return new JwtResponse(newAccessToken, newRefreshToken);
+    }
 
-        oldSession.setStatus(SessionStatus.USED);
-        sessionRepository.save(oldSession);
+    public List<UserSession> getUserSessions(String email) {
+        return sessionRepository.findAllByEmail(email);
+    }
 
-        return createSession(authentication);
+    private void saveSession(String email, String refreshToken) {
+        UserSession session = UserSession.builder()
+                .email(email)
+                .refreshToken(refreshToken)
+                .issuedAt(LocalDateTime.now())
+                .expiresAt(LocalDateTime.now().plusDays(7)) // Срок как в настройках JWT
+                .build();
+        sessionRepository.save(session);
     }
 }

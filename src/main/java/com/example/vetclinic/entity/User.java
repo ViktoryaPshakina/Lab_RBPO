@@ -5,12 +5,12 @@ import lombok.*;
 
 @Entity
 @Table(name = "users")
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -21,6 +21,7 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    // В базе создастся колонка VARCHAR(255)
     @Column(nullable = false)
     private String role;
 }

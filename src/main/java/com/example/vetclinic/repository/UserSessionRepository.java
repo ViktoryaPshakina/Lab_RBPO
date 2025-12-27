@@ -2,12 +2,12 @@ package com.example.vetclinic.repository;
 
 import com.example.vetclinic.entity.UserSession;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
-@Repository
-public interface UserSessionRepository extends JpaRepository<UserSession, UUID> {
+public interface UserSessionRepository extends JpaRepository<UserSession, Long> {
     Optional<UserSession> findByRefreshToken(String refreshToken);
-    void deleteByUserEmail(String userEmail);
+    List<UserSession> findAllByEmail(String email);
+    void deleteByRefreshToken(String refreshToken);
+    void deleteByEmail(String email); // Для логаута (удалить все сессии пользователя)
 }
