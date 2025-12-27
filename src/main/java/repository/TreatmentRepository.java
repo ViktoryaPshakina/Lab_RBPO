@@ -3,9 +3,9 @@ package com.example.vetclinic.repository;
 import com.example.vetclinic.entity.Treatment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import java.util.Optional;
 
 @Repository
 public interface TreatmentRepository extends JpaRepository<Treatment, Long> {
-
-    Treatment findByAppointmentId(Long appointmentId);
+    Optional<Treatment> findByAppointmentId(Long appointmentId);
 }
